@@ -246,5 +246,7 @@ if __name__ == "__main__":
     plt.grid(True, linestyle="--", alpha=0.5)
 
     plt.tight_layout()
-    plt.savefig("preprocessing/verification_plot.png", dpi=150)
-    print("Verification plot saved successfully as 'preprocessing/verification_plot.png'.")
+
+    savepng = "preprocessing/" + rec_name + "_verification_plot.png"
+    plt.savefig(savepng, dpi=150)
+    print("Verification plot saved successfully as", savepng)
