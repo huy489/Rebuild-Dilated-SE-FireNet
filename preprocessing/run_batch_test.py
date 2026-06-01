@@ -26,15 +26,10 @@ LABEL_MAP = {
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 RAW_AFDB_DIR = PROJECT_ROOT / "database" / "physionet.org" / "files" / "afdb" / "1.0.0"
 DATA_DIR = PROJECT_ROOT / "database" / "processed"
+TEST_OUT_DIR = DATA_DIR / "test"
 
-# Patient splits
-TRAIN_RECORDS = [
-    "04043", "04936", "07162", "07859", "07879", "08455", "06426", "05121",
-    "06995", "05261", "06453", "04015", "04908", "04048", "08434", "08378",
-]
-VAL_RECORDS = ["04746", "07910", "08219"]
+# Test Records list
 TEST_RECORDS = ["04126", "05091", "08215", "08405"]
-EXCLUDED_RECORDS = {"00735", "03665"}
 
 def read_raw_record(rec_name, raw_dir=RAW_AFDB_DIR):
     rec_path = raw_dir / rec_name
@@ -193,57 +188,22 @@ def process_single_record(rec_name, raw_dir=RAW_AFDB_DIR):
     print(f"Processed record {rec_name}: X shape = {X_rec.shape}, y shape = {y_rec.shape}")
     return X_rec, y_rec
 
-def process_records_list(records_list):
-    X_all, y_all = [], []
-    for rec in records_list:
+if __name__ == "__main__":
+    TEST_OUT_DIR.mkdir(parents=True, exist_ok=True)
+    
+    print("===============================================")
+    print("STARTING PROCESSING FOR INDIVIDUAL TEST RECORDS")
+    print("===============================================")
+    
+    for rec in TEST_RECORDS:
         start_time = time.time()
         X_rec, y_rec = process_single_record(rec)
         if len(X_rec) > 0:
-            X_all.append(X_rec)
-            y_all.append(y_rec)
-        print(f"  Finished in {time.time() - start_time:.2f} seconds")
-    if X_all:
-        return np.concatenate(X_all, axis=0), np.concatenate(y_all, axis=0)
-    else:
-        return np.array([]), np.array([])
-
-if __name__ == "__main__":
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
-    
-    print("===============================================")
-    print("STARTING PROCESSING FOR TRAIN SPLIT")
-    print("===============================================")
-    X_train, y_train = process_records_list(TRAIN_RECORDS)
-    np.save(DATA_DIR / "train" / "X_train.npy", X_train)
-    np.save(DATA_DIR / "train" / "y_train.npy", y_train)
-    print(f"-> Train Split Done. X_train={X_train.shape}, y_train={y_train.shape}\n")
+            np.save(TEST_OUT_DIR / f"X_{rec}.npy", X_rec)
+            np.save(TEST_OUT_DIR / f"y_{rec}.npy", y_rec)
+            print(f"-> Saved X_{rec}.npy and y_{rec}.npy to {TEST_OUT_DIR}")
+        print(f"  Finished {rec} in {time.time() - start_time:.2f} seconds\n")
 
     print("===============================================")
-    print("STARTING PROCESSING FOR VAL SPLIT")
+    print("TEST SPLIT BATCH PROCESSING COMPLETED")
     print("===============================================")
-    X_val, y_val = process_records_list(VAL_RECORDS)
-    np.save(DATA_DIR / "val" / "X_val.npy", X_val)
-    np.save(DATA_DIR / "val" / "y_val.npy", y_val)
-    print(f"-> Val Split Done. X_val={X_val.shape}, y_val={y_val.shape}\n")
-
-    print("===============================================")
-    print("STARTING PROCESSING FOR TEST SPLIT")
-    print("===============================================")
-    all_hea_files = sorted(RAW_AFDB_DIR.glob("*.hea"))
-    all_records = [f.stem for f in all_hea_files]
-    used_records = set(TRAIN_RECORDS + VAL_RECORDS) | EXCLUDED_RECORDS
-    TEST_RECORDS = [r for r in all_records if r not in used_records]
-    print(f"Inferred Test Records: {TEST_RECORDS}")
-    
-    X_test, y_test = process_records_list(TEST_RECORDS)
-    np.save(DATA_DIR / "test" / "X_test.npy", X_test)
-    np.save(DATA_DIR / "test" / "y_test.npy", y_test)
-    print(f"-> Test Split Done. X_test={X_test.shape}, y_test={y_test.shape}\n")
-
-    print("===============================================")
-    print("FINAL DATASET SUMMARY")
-    print("===============================================")
-    for name, y in [("Train", y_train), ("Val", y_val), ("Test", y_test)]:
-        vals, counts = np.unique(y, return_counts=True)
-        dist_dict = dict(zip(vals, counts))
-        print(f"{name} distribution: Normal = {dist_dict.get(0, 0)}, AFIB = {dist_dict.get(1, 0)}")
