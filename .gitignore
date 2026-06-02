@@ -5,5 +5,5 @@ src/__pycache__/
 train_on_colab/__pycache__/
 TFLite_Quantization/__pycache__/
 *.pyc
-*.json
+dilated-se-fire-10963f0a6a5a.json
 *.zip
