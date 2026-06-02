@@ -1,4 +1,4 @@
-# Hướng dẫn Kỹ thuật Giai đoạn 2: Xây dựng và Huấn luyện mô hình Dilated-SE-FireNet
+# Hướng dẫn Kỹ thuật: Xây dựng, Huấn luyện và Đánh giá mô hình Dilated-SE-FireNet (Float32)
 
 Tài liệu này giải thích cặn kẽ nguyên lý hoạt động, kiến trúc toán học, cấu trúc mã nguồn trong thư mục [src/](file:///home/pd/data/info_model/build_model/src) và hướng dẫn chi tiết cách chạy huấn luyện từ đầu đến cuối một cách độc lập.
 
@@ -108,6 +108,12 @@ Chứa toàn bộ các tham số của hệ thống. Bạn chỉ cần sửa fil
   * `EarlyStopping`: Theo dõi `val_loss`. Nếu liên tục trong 10 epoch (`patience=10`) mà loss không cải thiện, quá trình train sẽ tự động dừng để tránh Overfitting.
   * `CSVLogger`: Ghi lại nhật ký huấn luyện (loss, accuracy của tập train/val qua mỗi epoch) vào tệp CSV để vẽ đồ thị sau này.
 
+### 2.6. [src/evaluate.py](file:///home/pd/data/info_model/build_model/src/evaluate.py) (Đánh giá chi tiết mô hình Float32)
+* **Nguyên lý:** Đánh giá hiệu năng của mô hình sau huấn luyện trên tập dữ liệu kiểm thử độc lập (Test Set) chưa từng xuất hiện trong quá trình train/val.
+* **Chức năng:**
+  * **Đánh giá tổng thể (Overall):** Load tệp `best_dilated_se_firenet.keras`, dự đoán nhãn cho toàn bộ tập test gộp (`X_test.npy`, `y_test.npy`), tính toán Accuracy, Precision, Recall, F1-Score và sinh ra Ma trận nhầm lẫn tổng thể (`confusion_matrix_overall.png`), lưu báo cáo vào `evaluation_float32.json`.
+  * **Đánh giá theo từng bệnh nhân (Patient-by-patient):** Đánh giá hiệu năng riêng lẻ trên 4 bệnh nhân độc lập (`04126`, `05091`, `08215`, `08405`) để kiểm chứng độ ổn định và tổng quát hóa của mô hình trên các cá thể khác nhau. Sinh ra ma trận nhầm lẫn riêng cho từng ca bệnh và lưu báo cáo vào `evaluation_float32_patients.json`.
+
 ---
 
 ## 3. Hướng dẫn vận hành chi tiết (Step-by-step Execution)
@@ -165,3 +171,20 @@ python -m src.train --epochs 40 --batch_size 128 --lr 0.001
   * `val_loss` và `val_accuracy`: Chỉ số trên tập đánh giá (không áp dụng augmentation).
   * `precision` và `recall` (đặc biệt theo dõi `val_recall` của lớp AFIB).
 * Bạn có thể mở tệp [outputs/reports/train_log.csv](file:///home/pd/data/info_model/build_model/outputs/reports/train_log.csv) để theo dõi các chỉ số huấn luyện đã lưu qua các epoch.
+
+### Bước 3.4: Đánh giá chi tiết mô hình Float32
+Sau khi đã huấn luyện xong và có tệp mô hình `best_dilated_se_firenet.keras` trong thư mục checkpoints, hãy tiến hành đánh giá chi tiết trên tập kiểm thử bằng cách chạy lệnh:
+
+```bash
+python -m src.evaluate
+```
+
+Các tham số dòng lệnh tùy chọn hỗ trợ:
+* `--data_dir`: Thư mục dữ liệu kiểm thử (mặc định: `database/processed`).
+* `--model_path`: Đường dẫn tệp mô hình Keras (mặc định: `outputs/checkpoints/best_dilated_se_firenet.keras`).
+* `--report_dir`: Thư mục lưu trữ báo cáo đánh giá (mặc định: `outputs/reports`).
+
+**Kết quả mong đợi:**
+* Độ chính xác tổng thể (Accuracy) và các chỉ số Precision, Recall lớp AFIB hiển thị trực quan trên terminal.
+* Năm tệp ma trận nhầm lẫn dạng PNG (`confusion_matrix_overall.png`, `confusion_matrix_04126.png`, v.v.) được lưu thành công vào `outputs/reports/`.
+* Báo cáo đánh giá tổng thể và chi tiết từng bệnh nhân được lưu lần lượt vào `evaluation_float32.json` và `evaluation_float32_patients.json`.
